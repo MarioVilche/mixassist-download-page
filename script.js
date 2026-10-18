@@ -13,16 +13,64 @@ document.querySelectorAll('.nav-links a').forEach((link) => {
   });
 });
 
-const revealObserver = new IntersectionObserver((entries) => {
-  entries.forEach((entry) => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-      revealObserver.unobserve(entry.target);
-    }
-  });
-}, { threshold: 0.12 });
+const siteHeader = document.querySelector('.site-header');
+const scrollProgress = document.querySelector('.scroll-progress span');
 
-document.querySelectorAll('.reveal').forEach((element) => revealObserver.observe(element));
+const updateHeader = () => {
+  const y = window.scrollY;
+  siteHeader?.classList.toggle('scrolled', y > 8);
+
+  if (scrollProgress) {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    scrollProgress.style.transform = `scaleX(${max > 0 ? Math.min(y / max, 1) : 0})`;
+  }
+};
+
+updateHeader();
+window.addEventListener('scroll', updateHeader, { passive: true });
+
+const spyLinks = [...document.querySelectorAll('.nav-links a[href^="#"]:not(.nav-cta)')];
+const spySections = spyLinks
+  .map((link) => document.querySelector(link.getAttribute('href')))
+  .filter(Boolean);
+
+if (spySections.length && 'IntersectionObserver' in window) {
+  const spyObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      spyLinks.forEach((link) => {
+        link.classList.toggle('active', link.getAttribute('href') === `#${entry.target.id}`);
+      });
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+
+  spySections.forEach((section) => spyObserver.observe(section));
+}
+
+document.querySelectorAll('.feature-card, .download-card').forEach((card) => {
+  card.addEventListener('pointermove', (event) => {
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${event.clientX - rect.left}px`);
+    card.style.setProperty('--my', `${event.clientY - rect.top}px`);
+  });
+});
+
+const revealElements = document.querySelectorAll('.reveal');
+
+if ('IntersectionObserver' in window) {
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  revealElements.forEach((element) => revealObserver.observe(element));
+} else {
+  revealElements.forEach((element) => element.classList.add('visible'));
+}
 
 document.getElementById('year').textContent = new Date().getFullYear();
 
